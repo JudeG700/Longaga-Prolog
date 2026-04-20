@@ -233,6 +233,10 @@ turnFunc( 0, _, HumanPassed, ComputerPassed, HumanHand, ComputerHand, Layout, Bo
          NewHumanHand, NewComputerHand, NewLayout, NewBoneyard, LeftEnd, RightEnd, 
          NewCurrent, NewNext, NewHumanPassed, NewComputerPassed) :-
 
+
+    %reset pass at each turn
+    NewHumanPassed = false,
+
     write('Select an option:'), nl,
     write('1. Play 2. Draw 3. Pass 4. Help 5. Save'), nl,
     read(SelectedOption),
@@ -258,6 +262,10 @@ turnFunc( 0, _, HumanPassed, ComputerPassed, HumanHand, ComputerHand, Layout, Bo
 turnFunc(1, _, HumanPassed, ComputerPassed, HumanHand, ComputerHand, Layout, Boneyard,
          NewHumanHand, NewComputerHand, NewLayout, NewBoneyard, LeftEnd, RightEnd, NewCurrent, NewNext, NewHumanPassed, NewComputerPassed) :-
 
+
+    %reset pass at each turn
+    NewComputerPassed = false,
+
     write('AI is thinking...'), nl,
 
     % 1. Find options - Use the variables from the header!
@@ -265,7 +273,16 @@ turnFunc(1, _, HumanPassed, ComputerPassed, HumanHand, ComputerHand, Layout, Bon
 
     % 2. If no options, the AI MUST draw or pass (You are missing this logic!)
     ( Options == [] -> 
-        write('AI has no moves and must draw/pass (Logic not implemented yet)'), nl
+
+        ( Boneyard == [] -> 
+            write('I have no playable tiles and the boneyard is empty. I will pass.'),
+            NewComputerPassed = true
+
+            ;
+            write('I have no playable tiles. Proceeding with drawing...'),
+            write('still in process')
+        )
+
     ;   
         % 3. Find the best move using '1' as the player ID for Computer
         find_best_move(Options, ComputerHand, LeftEnd, RightEnd, 1, _BestTile, BestIndex, BestSide),
@@ -337,6 +354,8 @@ parse_tile(Tile, A, B) :-
 
 
 find_playable_tiles(Hand, LeftEnd, RightEnd, ComputerPassed, Options) :-
+
+    format("Computer Passed?: "), write(ComputerPassed), nl,
     findall([Index, Side],
         (
             nth0(Index, Hand, Tile),
@@ -356,6 +375,9 @@ find_playable_tiles(Hand, LeftEnd, RightEnd, ComputerPassed, Options) :-
 
 
 comp_playable_tiles(Hand, LeftEnd, RightEnd, HumanPassed, Options) :-
+
+    format("Human Passed?: "), write(HumanPassed), nl,
+
     findall([Index, Side],
         (
             nth0(Index, Hand, Tile),
@@ -472,8 +494,13 @@ takeTurn(1, HumanHand, ComputerHand, Boneyard, Layout, HumanPassed, ComputerPass
     format('takeTurn LAYOUT: '), write(NewLayout), nl.
 
 
+
+
+
 takeTurn(2, HumanHand, ComputerHand, Boneyard, Layout, HumanPass, ComputerPass, LeftEnd, RightEnd, NewHumanHand, NewComputerHand, NewLayout, NewBoneyard, NewHumanPassed, NewComputerPassed) :-
     write('Draw tile'), nl,
+
+
     write('Human draws'), write(Boneyard), nl,
     drawTile(HumanHand, Boneyard, DrawHand, Boneyard1),
     nth0(0, DrawHand, DrawnTile),
@@ -509,6 +536,64 @@ takeTurn(2, HumanHand, ComputerHand, Boneyard, Layout, HumanPass, ComputerPass, 
         NewComputerPassed = ComputerPass
     ).
 
+
+
+takeTurn(3, HumanHand, ComputerHand, Boneyard, Layout, HumanPass, ComputerPass, LeftEnd, RightEnd, NewHumanHand, NewComputerHand, NewLayout, NewBoneyard, NewHumanPassed, NewComputerPassed) :-
+    NewHumanHand = HumanHand,
+    NewComputerHand = ComputerHand,
+    NewBoneyard = Boneyard,
+    NewLayout = Layout,
+    NewHumanPassed = true,
+    NewComputerPassed = ComputerPass,
+    write('Human passed'), nl.
+
+
+takeTurn(4, HumanHand, ComputerHand, Boneyard, Layout, HumanPass, ComputerPassed, LeftEnd, RightEnd, NewHumanHand, NewComputerHand, NewLayout, NewBoneyard, NewHumanPassed, NewComputerPassed) :-
+    
+    help(HumanHand, LeftEnd, RightEnd, ComputerPassed, Boneyard),
+    NewHumanHand = HumanHand,
+    NewComputerHand = ComputerHand,
+    NewBoneyard = Boneyard,
+    NewLayout = Layout,
+    NewHumanPassed = HumanPass,
+    NewComputerPassed = ComputerPassed,
+    write('Get help'), nl.
+
+
+
+
+
+help(HumanHand, LeftEnd, RightEnd, ComputerPassed, Boneyard) :-
+
+    write('Ha ha you need help'), nl,
+
+    find_playable_tiles(HumanHand, LeftEnd, RightEnd, ComputerPassed, Options),
+
+    (   Options == []
+    ->  (   Boneyard == []
+        ->  write("You can't draw or play anymore tiles. You have to pass"), nl
+        ;   write('You have no playable tiles, you have to draw'), nl
+        )
+    ;   find_best_move(Options, HumanHand, LeftEnd, RightEnd, 0,
+                        BestTile, BestIndex, BestSide),
+
+        format("I recommend ~w on the ~w side~n", [BestTile, BestSide]),
+
+        parse_tile(BestTile, A, B),
+
+        (   ComputerPassed == true
+        ->  write("Opponent passed! Try to disrupt their streak!"), nl
+        ;   true
+        ),
+
+        (   A =:= B
+        ->  write("Try to get rid of doubles early"), nl,
+            write("Doubles placed strategically can disrupt opponent flow"), nl
+        ;   TotalPipValue is A + B,
+            format("Tile pip sum is ~w~n", [TotalPipValue]),
+            write("Higher pip tiles can reduce penalty if you lose"), nl
+        )
+    ).
 
 displayUI(TournScore, HumanHand, ComputerHand, Layout, Boneyard) :-
     write('_______________________________________'), nl,
