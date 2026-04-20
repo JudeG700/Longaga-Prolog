@@ -237,13 +237,13 @@ turnFunc( 0, _, HumanPassed, ComputerPassed, HumanHand, ComputerHand, Layout, Bo
     write('1. Play 2. Draw 3. Pass 4. Help 5. Save'), nl,
     read(SelectedOption),
     write('Human turn'), nl,
-    takeTurn(SelectedOption, HumanHand, Boneyard, Layout, HumanPassed, ComputerPassed, LeftEnd, RightEnd, NewHumanHand, NewLayout, NewBoneyard, NewHumanPassed, NewComputerPassed),
+    takeTurn(SelectedOption, HumanHand, ComputerHand, Boneyard, Layout, HumanPassed, ComputerPassed, LeftEnd, RightEnd, NewHumanHand, NewComputerHand, NewLayout, NewBoneyard, NewHumanPassed, NewComputerPassed),
 
     write('INITIALIZE>>>>>>'), nl,
-    NewBoneyard = Boneyard,
-    NewComputerHand = ComputerHand,
-    NewHumanPassed = HumanPassed,
-    NewComputerPassed = ComputerPassed,
+    %NewBoneyard = Boneyard,
+    %NewComputerHand = ComputerHand,
+    %NewHumanPassed = HumanPassed,
+    %NewComputerPassed = ComputerPassed,
 
     write('2>>>>>>'), nl,
     write('3>>>>>>'), nl,
@@ -459,14 +459,55 @@ applyMove(HumanHand, Index, Side, Layout, NewHumanHand, NewLayout) :-
 
 
 
-
-takeTurn(1, HumanHand, _, Layout, HumanPassed, ComputerPassed, LeftEnd, RightEnd, NewHumanHand, NewLayout, _, _, _) :-
+takeTurn(1, HumanHand, ComputerHand, Boneyard, Layout, HumanPassed, ComputerPassed, LeftEnd, RightEnd, NewHumanHand, NewComputerHand, NewLayout, NewBoneyard, NewHumanPassed, NewComputerPassed) :-
     write('ENTERING FIND TILES'), nl,
     
     find_playable_tiles(HumanHand, LeftEnd, RightEnd, ComputerPassed, Options),
     write('Playable options: '), write(Options), nl,
     turnLoop(HumanHand, Options, Layout, NewHumanHand, NewLayout),
+    NewBoneyard = Boneyard,
+    NewComputerHand = ComputerHand,
+    NewHumanPassed = HumanPassed,
+    NewComputerPassed = ComputerPassed,
     format('takeTurn LAYOUT: '), write(NewLayout), nl.
+
+
+takeTurn(2, HumanHand, ComputerHand, Boneyard, Layout, HumanPass, ComputerPass, LeftEnd, RightEnd, NewHumanHand, NewComputerHand, NewLayout, NewBoneyard, NewHumanPassed, NewComputerPassed) :-
+    write('Draw tile'), nl,
+    write('Human draws'), write(Boneyard), nl,
+    drawTile(HumanHand, Boneyard, DrawHand, Boneyard1),
+    nth0(0, DrawHand, DrawnTile),
+
+    find_playable_tiles([DrawnTile], LeftEnd, RightEnd, ComputerPass, Options),
+   (   Options == [] -> 
+        % CASE 1: Still no moves
+        write('Drawn tile unplayable. Passing turn.'), nl,
+        NewHumanHand = DrawHand,
+        NewComputerHand = ComputerHand,
+        NewBoneyard = Boneyard1,
+        NewLayout = Layout,
+        NewHumanPassed = true,
+        NewComputerPassed = ComputerPass
+    ;   length(Options, 1) ->
+        % CASE 2: Exactly one move possible (Auto-play)
+        write('Drawn tile is playable! Auto-playing only option...'), nl,
+        nth0(0, Options, [Index, Side]), % Get the index/side from the one option
+        applyMove(DrawHand, Index, Side, Layout, NewHumanHand, NewLayout),
+        NewComputerHand = ComputerHand,
+        NewBoneyard = Boneyard1,
+        NewHumanPassed = false,
+        NewComputerPassed = ComputerPass
+    ;   % CASE 3: More than one move (Manual play - for later)
+        write('Drawn tile is playable! Multiple sides available.'), nl,
+        write('OPTIONS:::'), write(Options), nl,
+        % For now, just pass through so it doesnt crash
+        NewHumanHand = DrawHand,
+        NewComputerHand = ComputerHand,
+        NewBoneyard = Boneyard1,
+        NewLayout = Layout,
+        NewHumanPassed = false,
+        NewComputerPassed = ComputerPass
+    ).
 
 
 displayUI(TournScore, HumanHand, ComputerHand, Layout, Boneyard) :-
